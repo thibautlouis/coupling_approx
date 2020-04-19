@@ -24,8 +24,8 @@ hole_radius_arcmin = 5
 apo_radius_degree_pts_source = 0.3
 
 # We will do three test, one without approx, one with l_tres, one with l_tres,
-l_tres = 5000
-l_toep = 3000
+l_tres = np.minimum(5000,lmax)
+l_toep = np.minimum(3000,lmax)
 l_thres_array = [None, l_tres, l_tres]
 l_toep_array = [None, None, l_toep]
 test_names = ["exact", "thres", "thres_toep"]
