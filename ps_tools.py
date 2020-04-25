@@ -1,23 +1,27 @@
-from pspy import so_map, so_window, sph_tools, so_mcm, pspy_utils, so_spectra, so_cov, flat_tools
-from scipy.ndimage.morphology import distance_transform_edt
-from pixell import enmap
-import time
-import numpy as np, pylab as plt
 from copy import deepcopy
 
+import numpy as np
+from scipy.ndimage.morphology import distance_transform_edt
 
-def create_window(patch,
-                  maps_info_list,
-                  apo_radius_survey,
-                  res_arcmin=0.5,
-                  galactic_mask=None,
-                  source_mask=None,
-                  compute_T_only=False):
+from pixell import enmap
+from pspy import (flat_tools, pspy_utils, so_cov, so_map, so_mcm, so_spectra,
+                  so_window, sph_tools)
 
-    """create a window function for a patch
-    
+
+def create_window(
+    patch,
+    maps_info_list,
+    apo_radius_survey,
+    res_arcmin=0.5,
+    galactic_mask=None,
+    source_mask=None,
+    compute_T_only=False,
+    use_rmax=True,
+):
+    """Create a window function for a patch
+
     Parameters
-    
+
     ----------
     patch: dict
       a dict containing the patch type and coordinates
@@ -35,86 +39,96 @@ def create_window(patch,
       the dictionnary should contain the name, the type of apodisation and the radius of apodisation
     galactic_mask: fits file
       an optional galactic mask to apply
+    compute_T_only: boolean
+      only use temperature field
+    use_rmax: boolean
+      apply apodization up to the apodization radius
     """
-
 
     if patch["patch_type"] == "Rectangle":
         car_box = patch["patch_coordinate"]
-        window = so_map.read_map(maps_info_list[0]["name"], car_box = car_box)
-        if maps_info_list[0]["data_type"]=="IQU":
+        window = so_map.read_map(maps_info_list[0]["name"], car_box=car_box)
+        if maps_info_list[0]["data_type"] == "IQU":
             window.data = window.data[0]
             window.ncomp = 1
         window.data[:] = 0
         window.data[1:-1, 1:-1] = 1
         apo_type_survey = "C1"
-    
+
     elif patch["patch_type"] == "Disk":
         dec_c, ra_c = patch["center"]
         radius = patch["radius"]
         eps = 0.1
-        car_box = [[dec_c - radius - eps, ra_c - radius - eps], [dec_c + radius + eps, ra_c + radius + eps]]
-        window = so_map.read_map(maps_info_list[0]["name"], car_box = car_box)
+        car_box = [
+            [dec_c - radius - eps, ra_c - radius - eps],
+            [dec_c + radius + eps, ra_c + radius + eps],
+        ]
+        window = so_map.read_map(maps_info_list[0]["name"], car_box=car_box)
         if maps_info_list[0]["data_type"] == "IQU":
             window.data = window.data[0]
             window.ncomp = 1
 
         window.data[:] = 1
-        y_c, x_c = enmap.sky2pix(window.data.shape, window.data.wcs, [dec_c * np.pi / 180, ra_c * np.pi / 180])
+        y_c, x_c = enmap.sky2pix(
+            window.data.shape, window.data.wcs, [dec_c * np.pi / 180, ra_c * np.pi / 180]
+        )
         window.data[int(y_c), int(x_c)] = 0
-        dist = distance_transform_edt(window.data) * res_arcmin * 1/60
+        dist = distance_transform_edt(window.data) * res_arcmin * 1 / 60
         window.data[dist < radius] = 0
         window.data = 1 - window.data
         apo_type_survey = "C1"
 
     if galactic_mask is not None:
-        gal_mask = so_map.read_map(galactic_mask, car_box = car_box)
+        gal_mask = so_map.read_map(galactic_mask, car_box=car_box)
         window.data *= gal_mask.data
         del gal_mask
+
     for map_info in maps_info_list:
-    
-        split = so_map.read_map(map_info["name"], car_box = car_box)
-        if (compute_T_only == True) & (map_info["data_type"] == "IQU"):
+        split = so_map.read_map(map_info["name"], car_box=car_box)
+        if compute_T_only and map_info["data_type"] == "IQU":
             split.data = split.data[0]
             split.ncomp = 1
-        
+
         if split.ncomp == 1:
-            window.data[split.data==0] = 0.
+            window.data[split.data == 0] = 0.0
 
         else:
             for i in range(split.ncomp):
-                window.data[split.data[i]==0] = 0.
-    window =  so_window.create_apodization(window,
-                                           apo_type=apo_type_survey,
-                                           apo_radius_degree=apo_radius_survey)
+                window.data[split.data[i] == 0] = 0.0
+
+    window = so_window.create_apodization(
+        window, apo_type=apo_type_survey, apo_radius_degree=apo_radius_survey, use_rmax=use_rmax
+    )
+
     if source_mask is not None:
-        ps_mask = so_map.read_map(source_mask["name"], car_box = car_box)
-        ps_mask = so_window.create_apodization(ps_mask,
-                                               apo_type=source_mask["apo_type"],
-                                               apo_radius_degree=source_mask["apo_radius"])
+        ps_mask = so_map.read_map(source_mask["name"], car_box=car_box)
+        ps_mask = so_window.create_apodization(
+            ps_mask, apo_type=source_mask["apo_type"], apo_radius_degree=source_mask["apo_radius"]
+        )
         window.data *= ps_mask.data
         del ps_mask
-        
+
     return car_box, window
 
 
-def compute_mode_coupling(window,
-                          type,
-                          lmax,
-                          binning_file,
-                          ps_method="master",
-                          beam=None,
-                          lmax_pad=None,
-                          l_exact=None,
-                          l_band=None,
-                          l_toep=None,
-                          compute_T_only=False):
+def compute_mode_coupling(
+    window,
+    type,
+    lmax,
+    binning_file,
+    ps_method="master",
+    beam=None,
+    lmax_pad=None,
+    l_exact=None,
+    l_band=None,
+    l_toep=None,
+    compute_T_only=False,
+):
+    """Compute the mode coupling corresponding the the window function
 
-
-    """compute the mode coupling corresponding the the window function
-    
     Parameters
     ----------
-    
+
     window: so_map
         the window function of the patch
     type: string
@@ -137,77 +151,82 @@ def compute_mode_coupling(window,
         True to compute only T spectra
     """
 
+    if ps_method == "2dflat":
+        return None
+
     bin_lo, bin_hi, bin_c, bin_size = pspy_utils.read_binning_file(binning_file, lmax)
     n_bins = len(bin_hi)
 
-    fsky = enmap.area(window.data.shape, window.data.wcs) / 4. / np.pi
+    fsky = enmap.area(window.data.shape, window.data.wcs) / 4.0 / np.pi
     fsky *= np.mean(window.data)
 
     if beam is not None:
         beam_data = np.loadtxt(beam)
         if compute_T_only == True:
-            beam = beam_data[:,1]
+            beam = beam_data[:, 1]
         else:
-            beam = (beam_data[:,1], beam_data[:,1])
-    
-    if compute_T_only == True:
+            beam = (beam_data[:, 1], beam_data[:, 1])
+
+    print("compute {} MCM".format(ps_method))
+    if compute_T_only:
         if ps_method == "master":
-            mbb_inv, Bbl = so_mcm.mcm_and_bbl_spin0(window,
-                                                    binning_file,
-                                                    bl1=beam,
-                                                    lmax=lmax,
-                                                    type=type,
-                                                    niter=0,
-                                                    lmax_pad=lmax_pad,
-                                                    l_exact=l_exact,
-                                                    l_band=l_band,
-                                                    l_toep=l_toep)
-                                                
+            mbb_inv, Bbl = so_mcm.mcm_and_bbl_spin0(
+                window,
+                binning_file,
+                bl1=beam,
+                lmax=lmax,
+                type=type,
+                niter=0,
+                lmax_pad=lmax_pad,
+                l_exact=l_exact,
+                l_band=l_band,
+                l_toep=l_toep,
+            )
+
         elif ps_method == "pseudo":
             mbb_inv = np.identity(n_bins)
             mbb_inv *= 1 / fsky
     else:
         window = (window, window)
         if ps_method == "master":
-            print("compute master MCM")
-            mbb_inv, Bbl = so_mcm.mcm_and_bbl_spin0and2(window,
-                                                        binning_file,
-                                                        bl1=beam,
-                                                        lmax=lmax,
-                                                        type=type,
-                                                        niter=0,
-                                                        lmax_pad=lmax_pad,
-                                                        l_exact=l_exact,
-                                                        l_band=l_band,
-                                                        l_toep=l_toep)
+            mbb_inv, Bbl = so_mcm.mcm_and_bbl_spin0and2(
+                window,
+                binning_file,
+                bl1=beam,
+                lmax=lmax,
+                type=type,
+                niter=0,
+                lmax_pad=lmax_pad,
+                l_exact=l_exact,
+                l_band=l_band,
+                l_toep=l_toep,
+            )
 
         elif ps_method == "pseudo":
             mbb_inv = {}
             spin_list = ["spin0xspin0", "spin0xspin2", "spin2xspin0"]
             for spin in spin_list:
                 mbb_inv[spin] = np.identity(n_bins)
-                mbb_inv[spin] *= 1/fsky
+                mbb_inv[spin] *= 1 / fsky
             mbb_inv["spin2xspin2"] = np.identity(4 * n_bins)
-            mbb_inv["spin2xspin2"] *= 1/fsky
-    
-    if ps_method == "2dflat":
-        mbb_inv = None
-        
+            mbb_inv["spin2xspin2"] *= 1 / fsky
+
     return mbb_inv
 
 
-def get_spectra(window,
-                maps_info_list,
-                car_box,
-                type,
-                lmax,
-                binning_file,
-                ps_method="master",
-                mbb_inv=None,
-                compute_T_only=False):
+def get_spectra(
+    window,
+    maps_info_list,
+    car_box,
+    type,
+    lmax,
+    binning_file,
+    ps_method="master",
+    mbb_inv=None,
+    compute_T_only=False,
+):
+    """Compute the power spectra in the patch
 
-    """compute the power spectra in the patch
-    
     Parameters
     ----------
     window: so_map
@@ -237,103 +256,96 @@ def get_spectra(window,
 
     ht_list = []
     name_list = []
-    
-    if (compute_T_only == False):
+
+    if not compute_T_only:
         window = (window, window)
 
     for map_info in maps_info_list:
-    
-        split = so_map.read_map(map_info["name"], car_box = car_box)
-        
-        if (compute_T_only == True) & (map_info["data_type"] == "IQU"):
+
+        split = so_map.read_map(map_info["name"], car_box=car_box)
+
+        if compute_T_only and map_info["data_type"] == "IQU":
             split.data = split.data[0]
             split.ncomp = 1
 
         if map_info["cal"] is not None:
             split.data *= map_info["cal"]
-        
-        if ps_method == "master" or ps_method == "pseudo":
-            print ("SPHT of %s in the patch" % map_info["name"])
-            alms = sph_tools.get_alms(split, window, niter=0, lmax=lmax+50)
+
+        if ps_method in ["master", "pseudo"]:
+            print("SPHT of %s in the patch" % map_info["name"])
+            alms = sph_tools.get_alms(split, window, niter=0, lmax=lmax + 50)
             ht_list += [alms]
-            
+
         elif ps_method == "2dflat":
-            print ("FFT of %s in the patch" % map_info["name"])
+            print("FFT of %s in the patch" % map_info["name"])
             ffts = flat_tools.get_ffts(split, window, lmax)
             ht_list += [ffts]
 
         name_list += [map_info["id"]]
-        
+
     split_num = np.arange(len(maps_info_list))
 
-    if (compute_T_only == True):
-        if ps_method == "master" or ps_method == "pseudo":
+    if compute_T_only:
+        if ps_method in ["master", "pseudo"]:
             spectra = None
         elif ps_method == "2dflat":
             spectra = ["II"]
     else:
-        if ps_method == "master" or ps_method == "pseudo":
+        if ps_method in ["master", "pseudo"]:
             spectra = ["TT", "TE", "TB", "ET", "BT", "EE", "EB", "BE", "BB"]
         elif ps_method == "2dflat":
             spectra = ["II", "IQ", "IU", "QI", "QQ", "QU", "UI", "UQ", "UU"]
-
 
     ps_dict = {}
     spec_name_list = []
 
     for name1, ht1, c1 in zip(name_list, ht_list, split_num):
         for name2, ht2, c2 in zip(name_list, ht_list, split_num):
-            if c1 > c2: continue
-            
+            if c1 > c2:
+                continue
+
             spec_name = "%sx%s" % (name1, name2)
 
-            if ps_method == "master" or ps_method == "pseudo":
+            if ps_method in ["master", "pseudo"]:
                 l, ps = so_spectra.get_spectra(ht1, ht2, spectra=spectra)
-                ells, ps_dict[spec_name] = so_spectra.bin_spectra(l,
-                                                                ps,
-                                                                binning_file,
-                                                                lmax,
-                                                                type=type,
-                                                                mbb_inv=mbb_inv,
-                                                                spectra=spectra)
-                                                                
-                                                                
+                ells, ps_dict[spec_name] = so_spectra.bin_spectra(
+                    l, ps, binning_file, lmax, type=type, mbb_inv=mbb_inv, spectra=spectra
+                )
+
             elif ps_method == "2dflat":
                 ells, ps_dict[spec_name] = flat_tools.power_from_fft(ht1, ht2, type=type)
-            
+
             spec_name_list += [spec_name]
-            
-            
-    if (compute_T_only == True):
-    # to make TT only behave the same as the other cases, make it a dictionnary
-        if ps_method == "master" or ps_method == "pseudo":
+
+    if compute_T_only:
+        # to make TT only behave the same as the other cases, make it a dictionnary
+        if ps_method in ["master", "pseudo"]:
             spectra = ["TT"]
             for spec_name in spec_name_list:
                 ps_dict[spec_name] = {"TT": ps_dict[spec_name]}
-    
-            
+
     return spectra, spec_name_list, ells, ps_dict
 
 
-def get_covariance(window,
-                   lmax,
-                   spec_name_list,
-                   ps_dict,
-                   binning_file,
-                   error_method="master",
-                   beam=None,
-                   spectra=None,
-                   l_exact=None,
-                   l_band=None,
-                   l_toep=None,
-                   mbb_inv=None,
-                   compute_T_only=False):
+def get_covariance(
+    window,
+    lmax,
+    spec_name_list,
+    ps_dict,
+    binning_file,
+    error_method="master",
+    spectra=None,
+    l_exact=None,
+    l_band=None,
+    l_toep=None,
+    mbb_inv=None,
+    compute_T_only=False,
+):
+    """Compute the covariance matrix of the power spectrum in the patch
 
-    """compute the covariance matrix of the power spectrum in the patch
-    
     Parameters
     ----------
-    
+
     window: so_map
       the window function of the patch
     lmax: integer
@@ -357,16 +369,16 @@ def get_covariance(window,
      True to compute only T spectra
 
     """
-    
 
     bin_lo, bin_hi, bin_c, bin_size = pspy_utils.read_binning_file(binning_file, lmax)
     n_bins = len(bin_hi)
 
-    fsky = enmap.area(window.data.shape, window.data.wcs) / 4. / np.pi
+    fsky = enmap.area(window.data.shape, window.data.wcs) / 4.0 / np.pi
     fsky *= np.mean(window.data)
-    
+
     cov_dict = {}
 
+    print("compute {} error".format(error_method))
     if error_method == "Knox":
         for name in spec_name_list:
             m1, m2 = name.split("x")
@@ -374,82 +386,89 @@ def get_covariance(window,
             for spec in spectra:
                 X, Y = spec
                 prefac = 1 / ((2 * bin_c + 1) * fsky * bin_size)
-                cov_dict[name][X+Y] =  np.diag( prefac *  (ps_dict["%sx%s"%(m1,m1)][X+X] * ps_dict["%sx%s"%(m2,m2)][Y+Y] + ps_dict["%sx%s"%(m1,m2)][X+Y]**2))
-                
+                cov_dict[name][X + Y] = np.diag(
+                    prefac
+                    * (
+                        ps_dict["%sx%s" % (m1, m1)][X + X] * ps_dict["%sx%s" % (m2, m2)][Y + Y]
+                        + ps_dict["%sx%s" % (m1, m2)][X + Y] ** 2
+                    )
+                )
+
     elif error_method == "master":
-    
-        if compute_T_only == False:
+
+        if not compute_T_only:
             mbb_inv = mbb_inv["spin0xspin0"]
 
-        print("compute master error")
-        coupling_dict = so_cov.cov_coupling_spin0(window, lmax, niter=0, l_band=l_band, l_toep=l_toep, l_exact=l_exact)
+        coupling_dict = so_cov.cov_coupling_spin0(
+            window, lmax, niter=0, l_band=l_band, l_toep=l_toep, l_exact=l_exact
+        )
         coupling = so_cov.bin_mat(coupling_dict["TaTcTbTd"], binning_file, lmax)
 
-        
         for name in spec_name_list:
             m1, m2 = name.split("x")
             cov_dict[name] = {}
             for spec in spectra:
                 X, Y = spec
-                cov_dict[name][X+Y] = so_cov.symmetrize(ps_dict["%sx%s"%(m1,m1)][X+X]) * so_cov.symmetrize(ps_dict["%sx%s"%(m2,m2)][Y+Y])
-                cov_dict[name][X+Y] += so_cov.symmetrize(ps_dict["%sx%s"%(m1,m2)][X+Y]**2)
-                cov_dict[name][X+Y] *= coupling
-                cov_dict[name][X+Y] = np.dot(np.dot(mbb_inv, cov_dict[name][X+Y]), mbb_inv.T)
-    
+                cov_dict[name][X + Y] = so_cov.symmetrize(
+                    ps_dict["%sx%s" % (m1, m1)][X + X]
+                ) * so_cov.symmetrize(ps_dict["%sx%s" % (m2, m2)][Y + Y])
+                cov_dict[name][X + Y] += so_cov.symmetrize(ps_dict["%sx%s" % (m1, m2)][X + Y] ** 2)
+                cov_dict[name][X + Y] *= coupling
+                cov_dict[name][X + Y] = np.dot(np.dot(mbb_inv, cov_dict[name][X + Y]), mbb_inv.T)
+
     else:
         cov_dict = None
-        
+
     return cov_dict
-    
-     
-def theory_for_covariance(ps_dict,
-                          spec_name_list,
-                          spectra,
-                          lmax,
-                          beam=None,
-                          binning_file=None,
-                          force_positive=True):
+
+
+def theory_for_covariance(
+    ps_dict, spec_name_list, spectra, lmax, beam=None, binning_file=None, force_positive=True
+):
 
     ps_dict_for_cov = deepcopy(ps_dict)
-    if force_positive == True:
+    if force_positive:
         for name in spec_name_list:
             m1, m2 = name.split("x")
             for spec in spectra:
                 X, Y = spec
-                ps_dict_for_cov["%sx%s"%(m1,m1)][X+X]= np.abs(ps_dict_for_cov["%sx%s"%(m1,m1)][X+X])
-                ps_dict_for_cov["%sx%s"%(m1,m1)][Y+Y]= np.abs(ps_dict_for_cov["%sx%s"%(m2,m2)][Y+Y])
-
+                ps_dict_for_cov["%sx%s" % (m1, m1)][X + X] = np.abs(
+                    ps_dict_for_cov["%sx%s" % (m1, m1)][X + X]
+                )
+                ps_dict_for_cov["%sx%s" % (m1, m1)][Y + Y] = np.abs(
+                    ps_dict_for_cov["%sx%s" % (m2, m2)][Y + Y]
+                )
 
     if beam is not None:
         beam_data = np.loadtxt(beam)
-        l, bl = beam_data[:,0], beam_data[:,1]
+        l, bl = beam_data[:, 0], beam_data[:, 1]
         lb, bb = pspy_utils.naive_binning(l, bl, binning_file, lmax)
         for name in spec_name_list:
             for spec in spectra:
-                ps_dict_for_cov[name][spec] *= bb**2
-                
+                ps_dict_for_cov[name][spec] *= bb ** 2
+
     return ps_dict_for_cov
-    
-    
-    
-def compute_ps(patch,
-               maps_info_list,
-               ps_method = "master",
-               error_method = "master",
-               type="Dl",
-               binning_file=None,
-               bin_size=None,
-               beam=None,
-               galactic_mask = None,
-               source_mask = None,
-               apo_radius_survey=1,
-               compute_T_only = False,
-               lmax = 1000,
-               lmax_pad = None,
-               l_exact = None,
-               l_band = None,
-               l_toep = None):
-               
+
+
+def compute_ps(
+    patch,
+    maps_info_list,
+    ps_method="master",
+    error_method="master",
+    type="Dl",
+    binning_file=None,
+    bin_size=None,
+    beam=None,
+    galactic_mask=None,
+    source_mask=None,
+    apo_radius_survey=1,
+    compute_T_only=False,
+    lmax=1000,
+    lmax_pad=None,
+    l_exact=None,
+    l_band=None,
+    l_toep=None,
+):
     """Compute spectra
 
     Parameters
@@ -496,70 +515,62 @@ def compute_ps(patch,
     if binning_file is None:
         pspy_utils.create_binning_file(bin_size=bin_size, n_bins=1000, file_name="binning.dat")
         binning_file = "binning.dat"
-        
-    car_box, window = create_window(patch,
-                                    maps_info_list,
-                                    apo_radius_survey,
-                                    galactic_mask=galactic_mask,
-                                    source_mask=source_mask,
-                                    compute_T_only=compute_T_only)
-                                    
-    
-    mbb_inv = compute_mode_coupling(window,
-                                    type,
-                                    lmax,
-                                    binning_file,
-                                    ps_method=ps_method,
-                                    beam=beam,
-                                    lmax_pad=lmax_pad,
-                                    l_exact=l_exact,
-                                    l_band=l_band,
-                                    l_toep=l_toep,
-                                    compute_T_only=compute_T_only)
-                                    
-    spectra, spec_name_list, ells, ps_dict = get_spectra(window,
-                                                         maps_info_list,
-                                                         car_box,
-                                                         type,
-                                                         lmax,
-                                                         binning_file,
-                                                         ps_method=ps_method,
-                                                         mbb_inv=mbb_inv,
-                                                         compute_T_only=compute_T_only)
-                                                         
-                                                         
-    if ps_method == "2dflat" or error_method == None:
-    
-        return spectra, spec_name_list, ells , ps_dict, None
-        
-    else:
-    
-        ps_dict_for_cov = theory_for_covariance(ps_dict,
-                                                spec_name_list,
-                                                spectra,
-                                                lmax,
-                                                beam=beam,
-                                                binning_file=binning_file)
-        
 
+    car_box, window = create_window(
+        patch,
+        maps_info_list,
+        apo_radius_survey,
+        galactic_mask=galactic_mask,
+        source_mask=source_mask,
+        compute_T_only=compute_T_only,
+    )
 
+    mbb_inv = compute_mode_coupling(
+        window,
+        type,
+        lmax,
+        binning_file,
+        ps_method=ps_method,
+        beam=beam,
+        lmax_pad=lmax_pad,
+        l_exact=l_exact,
+        l_band=l_band,
+        l_toep=l_toep,
+        compute_T_only=compute_T_only,
+    )
 
-        cov_dict = get_covariance(window,
-                                  lmax,
-                                  spec_name_list,
-                                  ps_dict_for_cov,
-                                  binning_file,
-                                  error_method=error_method,
-                                  l_exact=l_exact,
-                                  l_band=l_band,
-                                  l_toep=l_toep,
-                                  spectra=spectra,
-                                  mbb_inv=mbb_inv,
-                                  compute_T_only=compute_T_only)
-                                  
-        return spectra, spec_name_list, ells, ps_dict, cov_dict
-   
-     
-     
+    spectra, spec_name_list, ells, ps_dict = get_spectra(
+        window,
+        maps_info_list,
+        car_box,
+        type,
+        lmax,
+        binning_file,
+        ps_method=ps_method,
+        mbb_inv=mbb_inv,
+        compute_T_only=compute_T_only,
+    )
 
+    if ps_method == "2dflat" or error_method is None:
+        return spectra, spec_name_list, ells, ps_dict, None
 
+    ps_dict_for_cov = theory_for_covariance(
+        ps_dict, spec_name_list, spectra, lmax, beam=beam, binning_file=binning_file
+    )
+
+    cov_dict = get_covariance(
+        window,
+        lmax,
+        spec_name_list,
+        ps_dict_for_cov,
+        binning_file,
+        error_method=error_method,
+        l_exact=l_exact,
+        l_band=l_band,
+        l_toep=l_toep,
+        spectra=spectra,
+        mbb_inv=mbb_inv,
+        compute_T_only=compute_T_only,
+    )
+
+    return spectra, spec_name_list, ells, ps_dict, cov_dict
