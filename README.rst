@@ -40,7 +40,9 @@ When the parameters are set to None it corresponds to the exact computation.
     python compute_spectra.py.py global.dict
     
 Note that this step will be long (that's the point of the study!) since we compute the coupling exactly up to l=10000.
-Finally you can plot the spectra with
+
+You can plot spectra and residuals with
+
 .. code:: shell
 
     python plot_spectra.py global.dict
