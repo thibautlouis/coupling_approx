@@ -15,7 +15,7 @@ Pipeline flow chart
 
 The relevant parameters of the code are in the : ``global.dict``
 
-The first step of the pipeline is generating some simulation of the CMB sky in CAR pixellisation
+The first step of the pipeline is generating a simulation of the CMB sky in CAR pixellisation
 
 .. code:: shell
 
