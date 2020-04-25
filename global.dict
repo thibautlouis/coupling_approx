@@ -1,0 +1,31 @@
+# sim
+n_sims = 1
+res_arcmin = 0.5
+n_splits = 2
+name_split = "split"
+rms_uKarcmin_T = 2
+ra0 = -30
+ra1 = 30
+dec0 = -15
+dec1 = 15
+beamed_clfile = "data/cosmo_spectra_and_fg_beam_LAT93.dat"
+
+#  window
+apo_radius_survey_degree = 1
+nholes_degsq = 0.2
+hole_radius_arcmin = 5
+apo_radius_degree_pts_source = 0.3
+
+# spectra
+id_sim = 0
+lmax = 10000
+bin_size = 40
+type = "Dl"
+clfile = "data/cosmo_spectra_and_fg.dat"
+compute_T_only = False
+beam = "data/beam_LAT_93.dat"
+
+# approx
+l_exact_array = [None, 800]
+l_band_array  = [None, 2000]
+l_toep_array  = [None, 2500]

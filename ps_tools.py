@@ -3,9 +3,16 @@ from scipy.ndimage.morphology import distance_transform_edt
 from pixell import enmap
 import time
 import numpy as np, pylab as plt
+from copy import deepcopy
 
 
-def create_window(patch, maps_info_list, apo_radius_survey, res_arcmin=0.5, galactic_mask=None, source_mask=None, compute_T_only=False):
+def create_window(patch,
+                  maps_info_list,
+                  apo_radius_survey,
+                  res_arcmin=0.5,
+                  galactic_mask=None,
+                  source_mask=None,
+                  compute_T_only=False):
 
     """create a window function for a patch
     
@@ -63,7 +70,6 @@ def create_window(patch, maps_info_list, apo_radius_survey, res_arcmin=0.5, gala
         gal_mask = so_map.read_map(galactic_mask, car_box = car_box)
         window.data *= gal_mask.data
         del gal_mask
-
     for map_info in maps_info_list:
     
         split = so_map.read_map(map_info["name"], car_box = car_box)
@@ -77,11 +83,9 @@ def create_window(patch, maps_info_list, apo_radius_survey, res_arcmin=0.5, gala
         else:
             for i in range(split.ncomp):
                 window.data[split.data[i]==0] = 0.
-
     window =  so_window.create_apodization(window,
                                            apo_type=apo_type_survey,
                                            apo_radius_degree=apo_radius_survey)
-
     if source_mask is not None:
         ps_mask = so_map.read_map(source_mask["name"], car_box = car_box)
         ps_mask = so_window.create_apodization(ps_mask,
@@ -93,7 +97,17 @@ def create_window(patch, maps_info_list, apo_radius_survey, res_arcmin=0.5, gala
     return car_box, window
 
 
-def compute_mode_coupling(window, type, lmax, binning_file, ps_method="master", beam=None, lmax_pad=None, l_thres=None, l_toep=None, compute_T_only=False):
+def compute_mode_coupling(window,
+                          type,
+                          lmax,
+                          binning_file,
+                          ps_method="master",
+                          beam=None,
+                          lmax_pad=None,
+                          l_exact=None,
+                          l_band=None,
+                          l_toep=None,
+                          compute_T_only=False):
 
 
     """compute the mode coupling corresponding the the window function
@@ -145,7 +159,8 @@ def compute_mode_coupling(window, type, lmax, binning_file, ps_method="master", 
                                                     type=type,
                                                     niter=0,
                                                     lmax_pad=lmax_pad,
-                                                    l_thres=l_thres,
+                                                    l_exact=l_exact,
+                                                    l_band=l_band,
                                                     l_toep=l_toep)
                                                 
         elif ps_method == "pseudo":
@@ -162,7 +177,8 @@ def compute_mode_coupling(window, type, lmax, binning_file, ps_method="master", 
                                                         type=type,
                                                         niter=0,
                                                         lmax_pad=lmax_pad,
-                                                        l_thres=l_thres,
+                                                        l_exact=l_exact,
+                                                        l_band=l_band,
                                                         l_toep=l_toep)
 
         elif ps_method == "pseudo":
@@ -180,7 +196,15 @@ def compute_mode_coupling(window, type, lmax, binning_file, ps_method="master", 
     return mbb_inv
 
 
-def get_spectra(window, maps_info_list, car_box, type, lmax, binning_file, ps_method="master", mbb_inv=None, compute_T_only=False):
+def get_spectra(window,
+                maps_info_list,
+                car_box,
+                type,
+                lmax,
+                binning_file,
+                ps_method="master",
+                mbb_inv=None,
+                compute_T_only=False):
 
     """compute the power spectra in the patch
     
@@ -291,7 +315,19 @@ def get_spectra(window, maps_info_list, car_box, type, lmax, binning_file, ps_me
     return spectra, spec_name_list, ells, ps_dict
 
 
-def get_covariance(window, lmax, spec_name_list, ps_dict, binning_file, error_method="master", spectra=None, l_thres=None, l_toep=None, mbb_inv=None, compute_T_only=False):
+def get_covariance(window,
+                   lmax,
+                   spec_name_list,
+                   ps_dict,
+                   binning_file,
+                   error_method="master",
+                   beam=None,
+                   spectra=None,
+                   l_exact=None,
+                   l_band=None,
+                   l_toep=None,
+                   mbb_inv=None,
+                   compute_T_only=False):
 
     """compute the covariance matrix of the power spectrum in the patch
     
@@ -346,9 +382,10 @@ def get_covariance(window, lmax, spec_name_list, ps_dict, binning_file, error_me
             mbb_inv = mbb_inv["spin0xspin0"]
 
         print("compute master error")
-        coupling_dict = so_cov.cov_coupling_spin0(window, lmax, niter=0, l_thres=l_thres, l_toep=l_toep)
+        coupling_dict = so_cov.cov_coupling_spin0(window, lmax, niter=0, l_band=l_band, l_toep=l_toep, l_exact=l_exact)
         coupling = so_cov.bin_mat(coupling_dict["TaTcTbTd"], binning_file, lmax)
 
+        
         for name in spec_name_list:
             m1, m2 = name.split("x")
             cov_dict[name] = {}
@@ -363,7 +400,38 @@ def get_covariance(window, lmax, spec_name_list, ps_dict, binning_file, error_me
         cov_dict = None
         
     return cov_dict
+    
+     
+def theory_for_covariance(ps_dict,
+                          spec_name_list,
+                          spectra,
+                          lmax,
+                          beam=None,
+                          binning_file=None,
+                          force_positive=True):
 
+    ps_dict_for_cov = deepcopy(ps_dict)
+    if force_positive == True:
+        for name in spec_name_list:
+            m1, m2 = name.split("x")
+            for spec in spectra:
+                X, Y = spec
+                ps_dict_for_cov["%sx%s"%(m1,m1)][X+X]= np.abs(ps_dict_for_cov["%sx%s"%(m1,m1)][X+X])
+                ps_dict_for_cov["%sx%s"%(m1,m1)][Y+Y]= np.abs(ps_dict_for_cov["%sx%s"%(m2,m2)][Y+Y])
+
+
+    if beam is not None:
+        beam_data = np.loadtxt(beam)
+        l, bl = beam_data[:,0], beam_data[:,1]
+        lb, bb = pspy_utils.naive_binning(l, bl, binning_file, lmax)
+        for name in spec_name_list:
+            for spec in spectra:
+                ps_dict_for_cov[name][spec] *= bb**2
+                
+    return ps_dict_for_cov
+    
+    
+    
 def compute_ps(patch,
                maps_info_list,
                ps_method = "master",
@@ -378,7 +446,8 @@ def compute_ps(patch,
                compute_T_only = False,
                lmax = 1000,
                lmax_pad = None,
-               l_thres = None,
+               l_exact = None,
+               l_band = None,
                l_toep = None):
                
     """Compute spectra
@@ -393,7 +462,7 @@ def compute_ps(patch,
       dictionnary should contain the name, the data type ("IQU" or "I") and optionally a calibration factor to apply to the map
       note that all map in the list should have the same data type
     beam: text file
-      file describing the beam of the map, expect bl to be the second column and start at l=0 (standard is : l,bl, ...)
+      file describing the beam of the map, expect l,bl
     binning_file: text file
       a binning file with three columns bin low, bin high, bin mean
       note that either binning_file or bin_size should be provided
@@ -443,7 +512,8 @@ def compute_ps(patch,
                                     ps_method=ps_method,
                                     beam=beam,
                                     lmax_pad=lmax_pad,
-                                    l_thres=l_thres,
+                                    l_exact=l_exact,
+                                    l_band=l_band,
                                     l_toep=l_toep,
                                     compute_T_only=compute_T_only)
                                     
@@ -463,13 +533,25 @@ def compute_ps(patch,
         return spectra, spec_name_list, ells , ps_dict, None
         
     else:
+    
+        ps_dict_for_cov = theory_for_covariance(ps_dict,
+                                                spec_name_list,
+                                                spectra,
+                                                lmax,
+                                                beam=beam,
+                                                binning_file=binning_file)
+        
+
+
+
         cov_dict = get_covariance(window,
                                   lmax,
                                   spec_name_list,
-                                  ps_dict,
+                                  ps_dict_for_cov,
                                   binning_file,
                                   error_method=error_method,
-                                  l_thres=l_thres,
+                                  l_exact=l_exact,
+                                  l_band=l_band,
                                   l_toep=l_toep,
                                   spectra=spectra,
                                   mbb_inv=mbb_inv,
