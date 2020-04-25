@@ -47,3 +47,15 @@ You can plot spectra and residuals with
 
     python plot_spectra.py global.dict
 
+If you want to focus only on the coupling computation you can run
+
+.. code:: shell
+
+    python compute_coupling.py global.dict
+
+And plot the coupling with
+
+.. code:: shell
+
+    python plot_coupling.py 
+
