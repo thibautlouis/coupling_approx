@@ -27,13 +27,13 @@ then we can generate the baseline window function
 
     python generate_window.py global.dict
 
-The next step is to compute power spectra with exact mode coupling computation and the approximated one. In the global_dict, we have specified the baseline parameters to be
+The next step is to compute power spectra with the exact mode coupling computation and the with the approximated one. In the global_dict, we have specified the baseline parameters to be
 
 ``l_exact_array = [None, 800]``
 ``l_band_array  = [None, 2000]``
 ``l_toep_array  = [None, 2500]``
 
-When the parameters are set to None it corresponds to the exact computation.
+When all parameters are set to None it corresponds to the exact computation.
 
 .. code:: shell
 
