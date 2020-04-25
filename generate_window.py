@@ -12,7 +12,7 @@ pspy_utils.create_directory(window_dir)
 ra0, ra1, dec0, dec1 = d["ra0"], d["ra1"], d["dec0"], d["dec1"]
 
 patch = {"patch_type": "Rectangle",
-         "patch_coordinate": [[ra0, dec0], [ra1, dec1]]}
+         "patch_coordinate": [[dec0, ra0], [dec1, ra1]]}
          
 sim_dir = "sims"
 maps_info_list = []
