@@ -143,9 +143,6 @@ def compute_mode_coupling(
         can be "master", "pseudo", or "2dflat" for now
     beam: text file
         file describing the beam of the map, expect bl to be the second column and start at l=0 (standard is : l,bl, ...)
-    lmax_pad: integer
-        the maximum multipole to consider for the mcm computation (optional)
-        lmax_pad should always be greater than lmax
     save_coupling: str
     compute_T_only: boolean
         True to compute only T spectra
@@ -177,7 +174,6 @@ def compute_mode_coupling(
                 lmax=lmax,
                 type=type,
                 niter=0,
-                lmax_pad=lmax_pad,
                 l_exact=l_exact,
                 l_band=l_band,
                 l_toep=l_toep,
@@ -196,7 +192,6 @@ def compute_mode_coupling(
                 lmax=lmax,
                 type=type,
                 niter=0,
-                lmax_pad=lmax_pad,
                 l_exact=l_exact,
                 l_band=l_band,
                 l_toep=l_toep,
@@ -464,7 +459,6 @@ def compute_ps(
     apo_radius_survey=1,
     compute_T_only=False,
     lmax=1000,
-    lmax_pad=None,
     l_exact=None,
     l_band=None,
     l_toep=None,
@@ -507,9 +501,6 @@ def compute_ps(
       True to compute only T spectra, should always be true for data_type= "I"
     lmax : integer
       the maximum multipole to consider for the spectra computation
-    lmax_pad: integer
-      the maximum multipole to consider for the mcm computation (optional)
-      lmax_pad should always be greater than lmax
     """
 
     if binning_file is None:
@@ -532,7 +523,6 @@ def compute_ps(
         binning_file,
         ps_method=ps_method,
         beam=beam,
-        lmax_pad=lmax_pad,
         l_exact=l_exact,
         l_band=l_band,
         l_toep=l_toep,
