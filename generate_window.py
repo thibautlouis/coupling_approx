@@ -8,7 +8,10 @@ d.read_from_file(sys.argv[1])
 run_name = d["run_name"]
 
 window_dir = "window_%s" % run_name
+plot_dir = "plot_%s" % run_name
+
 pspy_utils.create_directory(window_dir)
+pspy_utils.create_directory(plot_dir)
 
 ra0, ra1, dec0, dec1 = d["ra0"], d["ra1"], d["dec0"], d["dec1"]
 
@@ -44,7 +47,7 @@ ps_mask = so_window.create_apodization(ps_mask, apo_type="C1", apo_radius_degree
 window.data *= ps_mask.data
 
 window.write_map("%s/window.fits" % (window_dir))
-window.plot(file_name="%s/window"%(window_dir))
+window.plot(file_name="%s/window"%(plot_dir))
 np.savetxt("%s/car_box.dat"%(window_dir), car_box)
 
 
