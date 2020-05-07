@@ -10,12 +10,15 @@ def update_dict(dict, keys_boost, boost_factor, name):
             updated_dict[key] *= boost_factor
         
     g = open("global%s.dict" % name , mode="w")
-    g.write("run_name = %s \n" % (dict["run_name"] + name))
+    g.write("run_name = '%s' \n" % (dict["run_name"] + name))
     for key in dict:
         if key == "run_name": continue
-        g.write("%s = %s \n" % (key,updated_dict[key]))
-    g.close()
+        if isinstance(updated_dict[key],str):
+            g.write("%s = '%s' \n" % (key, updated_dict[key]))
+        else:
+            g.write("%s = %s \n" % (key, updated_dict[key]))
 
+    g.close()
     
 d = so_dict.so_dict()
 d.read_from_file(sys.argv[1])
