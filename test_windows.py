@@ -24,7 +24,7 @@ boost_fac = np.linspace(1, 3, 5)
 for boost in boost_fac:
     new_name = "_sizex%s" % boost
     update_dict(d, ["ra0","ra1","dec0","dec1"], boost, name=new_name)
-    os.system("python generate_sim.py global%s.dict" % new_dict)
-    os.system("python generate_window.py global%s.dict" % new_dict)
-    os.system("python compute_spectra.py global%s.dict" % new_dict)
-    os.system("python plot_spectra.py global%s.dict" % new_dict)
+    os.system("python generate_sim.py global%s.dict" % new_name)
+    os.system("python generate_window.py global%s.dict" % new_name)
+    os.system("python compute_spectra.py global%s.dict" % new_name)
+    os.system("python plot_spectra.py global%s.dict" % new_name)
