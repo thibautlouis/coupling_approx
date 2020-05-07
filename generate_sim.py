@@ -12,8 +12,9 @@ name_split = d["name_split"]
 n_splits = d["n_splits"]
 rms_uKarcmin_T = d["rms_uKarcmin_T"] * np.sqrt(n_splits)
 ra0, ra1, dec0, dec1 = d["ra0"], d["ra1"], d["dec0"], d["dec1"]
+run_name = d["run_name"]
 
-sim_dir = "sims"
+sim_dir = "sims_%s" % run_name
 pspy_utils.create_directory(sim_dir)
 
 eps = 1
@@ -28,5 +29,6 @@ for iii in range(n_sims):
         noise = so_map.white_noise(split, rms_uKarcmin_T=rms_uKarcmin_T)
         split.data += noise.data
         split.write_map("%s/%s.fits" % (sim_dir, name))
-    
+        split.plot(file_name="%s/%s" % (sim_dir, name))
+
     

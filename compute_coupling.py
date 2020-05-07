@@ -1,9 +1,12 @@
 from pspy import so_map, so_dict, sph_tools, so_mcm, pspy_utils
 import numpy as np, healpy as hp
-import sys, time
+import sys, time, os
 
 d = so_dict.so_dict()
 d.read_from_file(sys.argv[1])
+
+run_name = d["run_name"]
+
 
 l_exact_array = d["l_exact_array"]
 l_band_array = d["l_band_array"]
@@ -11,10 +14,10 @@ l_toep_array = d["l_toep_array"]
 lmax = d["lmax"]
 niter = 0
 
-coupling_dir = "coupling"
+coupling_dir = "coupling_%s" % run_name
 pspy_utils.create_directory(coupling_dir)
 
-window_dir = "window"
+window_dir = "window_%s"  % run_name
 window = so_map.read_map("%s/window.fits" % (window_dir))
 
 win_alm = sph_tools.map2alm(window, niter=niter, lmax=lmax)
@@ -43,3 +46,4 @@ for l_exact, l_band, l_toep in zip(l_exact_array, l_band_array, l_toep_array):
     name_list =["00", "02", "20", "++", "--"]
     for id_mcm, name in enumerate(name_list):
         np.save("%s/coupling_%s_%s.npy" % (coupling_dir, test, name), mcm_list[id_mcm])
+    time.sleep(200)

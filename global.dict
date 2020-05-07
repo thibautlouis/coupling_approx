@@ -1,9 +1,10 @@
 # sim
+run_name = "baseline"
 n_sims = 1
 res_arcmin = 0.5
 n_splits = 2
 name_split = "split"
-rms_uKarcmin_T = 2
+rms_uKarcmin_T = 2 # 0.7
 ra0 = -30
 ra1 = 30
 dec0 = -15
@@ -26,6 +27,7 @@ compute_T_only = False
 beam = "data/beam_LAT_93.dat"
 
 # approx
-l_exact_array = [None, 800]
-l_band_array  = [None, 2000]
-l_toep_array  = [None, 2500]
+
+l_exact_array = [800, None]
+l_band_array  = [2000, None]
+l_toep_array  = [2500, None]

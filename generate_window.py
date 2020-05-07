@@ -5,8 +5,9 @@ import sys
 
 d = so_dict.so_dict()
 d.read_from_file(sys.argv[1])
+run_name = d["run_name"]
 
-window_dir = "window"
+window_dir = "window_%s" % run_name
 pspy_utils.create_directory(window_dir)
 
 ra0, ra1, dec0, dec1 = d["ra0"], d["ra1"], d["dec0"], d["dec1"]
@@ -14,7 +15,7 @@ ra0, ra1, dec0, dec1 = d["ra0"], d["ra1"], d["dec0"], d["dec1"]
 patch = {"patch_type": "Rectangle",
          "patch_coordinate": [[dec0, ra0], [dec1, ra1]]}
          
-sim_dir = "sims"
+sim_dir = "sims_%s" % run_name
 maps_info_list = []
 for i in range(d["n_splits"]):
     name = "sim_%03d_%s%d" % (d["id_sim"], d["name_split"], i)
@@ -35,6 +36,7 @@ apo_radius_degree_pts_source = d["apo_radius_degree_pts_source"]
 
 
 n_holes = int((ra1 - ra0) * (dec1 - dec0) * nholes_degsq)
+print(n_holes)
 ps_mask = window.copy()
 ps_mask.data[:] = 1
 ps_mask = so_map.simulate_source_mask(ps_mask, n_holes, hole_radius_arcmin)

@@ -39,9 +39,9 @@ def plot_spectra_comparison(lb, result_ps, result_cov, cross, spectra, test_name
             plt.subplot(3, 2, count)
             
             if count == 1:
-                plt.title("$\ell$ < %d" % lmid, fontsize=20)
+                plt.title("$\ell$ < %d" % lmid, fontsize=30)
             elif count == 2:
-                 plt.title("$\ell$ > %d" % lmid, fontsize=20)
+                 plt.title("$\ell$ > %d" % lmid, fontsize=30)
 
             if label == "high_ell":
                 plt.xticks([6000,7000,8000,9000,10000])
@@ -66,18 +66,18 @@ def plot_spectra_comparison(lb, result_ps, result_cov, cross, spectra, test_name
                             ps_select * lb_select**fac,
                             sigma_select * lb_select**fac,
                             fmt=".",
-                            label = r"$\ell_{\rm exact}=$%s, $\Delta \ell_{\rm band}=$%s, $\ell_{\rm toep}=$%s"% (l_exact,l_band, l_toep),
+                            label = "Toeplitz approximation",
                             color = "steelblue")
      
                 if count >4:
-                    plt.xlabel(r"$\ell$", fontsize=25)
-                plt.ylabel(r"$\ell^{%d} D^{%s}_\ell$" % (fac,spec), fontsize=25)
+                    plt.xlabel(r"$\ell$", fontsize=35)
+                plt.ylabel(r"$\ell^{%d} D^{%s}_\ell$" % (fac,spec), fontsize=35)
                 plt.xticks(fontsize=20)
                 plt.yticks(fontsize=20)
-        
+            if count==2:
+                plt.legend(fontsize=25, loc = "upper left", frameon = False)
             count += 1
 
-    plt.legend(fontsize=20, loc = "upper left")
     plt.savefig("%s/%s.pdf" % (plot_dir, spectra_names), bbox_inches="tight")
     plt.clf()
     plt.close()
@@ -100,11 +100,39 @@ def delta_Cl_over_sigma(lb, result_ps, result_cov, cross, spectra, test_names, p
                          label = "%s" % spec)
 
     plt.ylim(10**-6, 1)
-    plt.legend(fontsize=25)
-    plt.xlabel(r"$\ell$", fontsize=30)
-    plt.ylabel(r"$|\Delta D_{\ell}|/\sigma(D_{\ell})$", fontsize=30)
-    plt.xticks(fontsize=20)
-    plt.yticks(fontsize=20)
+    plt.legend(fontsize=30, frameon=False)
+    plt.xlabel(r"$\ell$", fontsize=40)
+    plt.ylabel(r"$|\Delta D_{\ell}|/\sigma(D_{\ell})$", fontsize=40)
+    plt.xticks(fontsize=30)
+    plt.yticks(fontsize=30)
     plt.savefig("%s/diff_per_sigma_all.png" % (plot_dir), bbox_inches="tight")
+    plt.clf()
+    plt.close()
+
+
+def cov_plot(lb,  result_cov, cross, spectra, test_names, plot_dir):
+
+    plt.figure(figsize=(15, 15))
+    plt.semilogy()
+    for spec in ["TT", "TE", "EE", "BB", "TB", "EB"]:
+        cov_exact  =  result_cov["exact"][cross][spec]
+        std_exact = np.sqrt(np.diag(cov_exact))
+
+        for count,test in enumerate(test_names):
+            cov = result_cov[test][cross][spec]
+            std = np.sqrt(np.diag(cov))
+
+            plt.errorbar(lb,
+                        np.abs(std - std_exact)/std_exact,
+                        label = "%s" % spec)
+
+    plt.legend(fontsize=30, frameon=False)
+    plt.xlabel(r"$\ell$", fontsize=40)
+    plt.ylabel(r"$|\Delta \sigma(D_{\ell})|/\sigma(D_{\ell})$", fontsize=40)
+    plt.xticks(fontsize=30)
+    plt.yticks(fontsize=30)
+    plt.ylim(10**-5, 0.1)
+
+    plt.savefig("%s/sigma_all.png" % (plot_dir), bbox_inches="tight")
     plt.clf()
     plt.close()

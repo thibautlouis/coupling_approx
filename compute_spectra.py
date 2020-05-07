@@ -7,10 +7,11 @@ import time
 
 d = so_dict.so_dict()
 d.read_from_file(sys.argv[1])
+run_name = d["run_name"]
 
-sim_dir = "sims"
-window_dir = "window"
-spectra_dir = "spectra"
+sim_dir = "sims_%s" % run_name
+window_dir = "window_%s" % run_name
+spectra_dir = "spectra_%s" % run_name
 
 pspy_utils.create_directory(spectra_dir)
 
