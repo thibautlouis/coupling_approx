@@ -4,7 +4,7 @@ n_sims = 1
 res_arcmin = 0.5
 n_splits = 2
 name_split = "split"
-rms_uKarcmin_T = 2 # 0.7
+rms_uKarcmin_T = 2
 ra0 = -30
 ra1 = 30
 dec0 = -15
@@ -30,4 +30,4 @@ beam = "data/beam_LAT_93.dat"
 
 l_exact_array = [800, None]
 l_band_array  = [2000, None]
-l_toep_array  = [2500, None]
+l_toep_array  = [2750, None]
