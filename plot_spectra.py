@@ -72,10 +72,9 @@ spectra_plot_utils.delta_Cl_over_sigma(lb, result_ps, result_cov, cross, spectra
 
 spectra_plot_utils.cov_plot(lb,  result_cov, cross, spectra, test_names, plot_dir)
 
-for spec in spectra:
-    for count,test in enumerate(test_names):
-        ps, sigma = result_ps[test][cross][spec], np.sqrt(np.diag(result_cov[test][cross][spec]))
-        print(ps)
+#for spec in spectra:
+ #   for count,test in enumerate(test_names):
+  #      ps, sigma = result_ps[test][cross][spec], np.sqrt(np.diag(result_cov[test][cross][spec]))
         
     
  #   plt.figure(figsize=(15, 15))
