@@ -16,8 +16,6 @@ myelements = elements.copy()
 myelements = myelements*0+1
 id = np.where(elements == 0)
 myelements[id] =-1
-id = np.where(approx == 0)
-myelements[id] = np.nan
 
 top = cm.get_cmap('Oranges_r', 128)
 bottom = cm.get_cmap('Blues', 128)
