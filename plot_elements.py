@@ -9,8 +9,8 @@ from matplotlib.colors import ListedColormap, LinearSegmentedColormap
 
 pixell.colorize.mpl_setdefault("planck")
 
-elements = np.load("coupling/element_computed.npy")
-approx = np.load("coupling/coupling_800_2000_2500_00.npy")
+elements = np.load("coupling_baseline/element_computed.npy")
+approx = np.load("coupling_baseline/coupling_800_2000_2750_00.npy")
 
 myelements = elements.copy()
 myelements = myelements*0+1
@@ -27,7 +27,7 @@ newcolors = np.vstack((top(np.linspace(0.8, 1, 128)),
 newcmp = ListedColormap(newcolors, name='OrangeBlue')
 
 
-l_toep = 2500
+l_toep = 2750
 l_band = 2000
 l_exact = 800
 l_max = 10000
