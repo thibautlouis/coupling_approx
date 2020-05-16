@@ -16,9 +16,15 @@ myelements = elements.copy()
 myelements = myelements*0+1
 id = np.where(elements == 0)
 myelements[id] =-1
+id = np.where(approx == 0)
+myelements[id] = 0.3
+
+index =np.triu_indices(myelements.shape[0],k=1)
+myelements[index] = np.nan
+
 
 top = cm.get_cmap('Oranges_r', 128)
-bottom = cm.get_cmap('Blues', 128)
+bottom = cm.get_cmap('YlGnBu', 128)
 
 newcolors = np.vstack((top(np.linspace(0.8, 1, 128)),
                        bottom(np.linspace(0, 0.6, 128))))
@@ -30,7 +36,7 @@ l_band = 2000
 l_exact = 800
 l_max = 10000
 
-fig2 = plt.figure(figsize=(23,23))
+fig2 = plt.figure(figsize=(27,27))
 f2_ax1 = fig2.add_subplot()
 f2_ax1.matshow(myelements, interpolation='nearest',cmap=newcmp)
 plt.xlabel(r"$\ell_{2}$",fontsize=50)
@@ -48,7 +54,7 @@ f2_ax1.autoscale(False)
 plt.xticks(fontsize=50)
 plt.yticks(fontsize=50)
 
-#plt.show()
+    #plt.show()
 plt.savefig("elements.png", bbox_inches="tight")
 plt.clf()
 plt.close()
