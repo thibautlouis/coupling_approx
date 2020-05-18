@@ -22,7 +22,7 @@ def update_dict2(dict, keys_boost, new_factor, name):
 d = so_dict.so_dict()
 d.read_from_file(sys.argv[1])
 
-new_fac = np.linspace(600, 2200, 5).astype(int)
+new_fac = np.linspace(1000, 2200, 5).astype(int)
 for boost in new_fac:
     new_name = "_band%s" % boost
     update_dict2(d, "l_band_array", boost, name=new_name)
