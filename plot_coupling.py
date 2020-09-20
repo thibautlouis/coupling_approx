@@ -8,12 +8,13 @@ d = so_dict.so_dict()
 d.read_from_file(sys.argv[1])
 
 
-plot_dir = "plot"
 
 pspy_utils.create_directory(plot_dir)
 
+run_name = d["run_name"]
+plot_dir = "plot_%s" % run_name
 
-coupling_dir = "coupling"
+coupling_dir = "coupling_%s" % run_name
 
 name_list =["00", "02", "20", "++", "--"]
 mcm_dict = {}
