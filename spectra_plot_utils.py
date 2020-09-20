@@ -71,7 +71,7 @@ def plot_spectra_comparison(lb, result_ps, result_cov, cross, spectra, test_name
      
                 if count >4:
                     plt.xlabel(r"$\ell$", fontsize=35)
-                plt.ylabel(r"$\ell^{%d} D^{%s}_\ell$" % (fac,spec), fontsize=35)
+                plt.ylabel(r"$\ell^{%d} D^{%s}_\ell [\mu K]^{2}$"  % (fac,spec), fontsize=35)
                 plt.xticks(fontsize=20)
                 plt.yticks(fontsize=20)
             if count==2:
