@@ -9,10 +9,11 @@ d.read_from_file(sys.argv[1])
 
 
 
-pspy_utils.create_directory(plot_dir)
 
 run_name = d["run_name"]
 plot_dir = "plot_%s" % run_name
+
+pspy_utils.create_directory(plot_dir)
 
 coupling_dir = "coupling_%s" % run_name
 

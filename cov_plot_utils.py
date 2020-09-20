@@ -11,14 +11,14 @@ def toepliz_plot(plot_dir, corr, name, lsplit):
     fig2 = plt.figure(constrained_layout=True,figsize=(15,4.5))
     spec2 = gridspec.GridSpec(ncols=3, nrows=2, figure=fig2)
     f2_ax1 = fig2.add_subplot(spec2[0:2, 0:2])
-    cax = f2_ax1.matshow(corr, norm=LogNorm())
+    cax = f2_ax1.matshow(np.abs(corr), norm=LogNorm())
     
     cb = plt.colorbar(cax, aspect=50)
     cb.ax.tick_params(labelsize=16)
 
 
   #  fig2.colorbar(cax, aspect=50)
-    plt.title(r"$\xi^{%s}(\ell_{1}, \ell_{2})$" % name,fontsize=17, pad=15)
+    plt.title(r"$| \xi^{%s}_{\ell_{1}, \ell_{2}} |$" % name,fontsize=17, pad=20)
 
     plt.xticks(fontsize=15)
     plt.yticks(fontsize=15)
@@ -27,7 +27,7 @@ def toepliz_plot(plot_dir, corr, name, lsplit):
     plt.ylabel(r"$\ell_{1}$", fontsize=20)
 
     lmin_array=[0, lsplit]
-    lmax_array=[lsplit, 10000]
+    lmax_array=[lsplit, 9998]
     count = 0
     for lmin, lmax in zip(lmin_array,lmax_array):
         f2_ax2 = fig2.add_subplot(spec2[count, 2])
@@ -37,7 +37,7 @@ def toepliz_plot(plot_dir, corr, name, lsplit):
  
         plt.title(r"$\ell_{1} \in [%d,%d]$"%(lmin,lmax),fontsize=15)
         #plt.xlim(0,3000)
-        plt.ylabel(r"$\xi^{%s}_{\ell_{1}, \ell_{1} + \Delta \ell} $" % name ,fontsize=18)
+        plt.ylabel(r"$|\xi^{%s}_{\ell_{1}, \ell_{1} + \Delta \ell}| $" % name ,fontsize=18)
         plt.xlabel(r"$\Delta \ell$",fontsize=20)
         
         if name != "--":
@@ -48,7 +48,7 @@ def toepliz_plot(plot_dir, corr, name, lsplit):
             plt.ylim(10**-6, 1)
 
         for ell in ell_range:
-            f2_ax2.plot(corr[ell, ell:], alpha=0.3, c="steelblue")
+            f2_ax2.plot(np.abs(corr[ell, ell:]), alpha=0.3, c="steelblue")
             
         plt.xticks(fontsize=13)
         plt.yticks(fontsize=14)
